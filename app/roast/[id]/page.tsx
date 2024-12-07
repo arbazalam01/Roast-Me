@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
-import { MessageSquare, Send, User, Clock, Check, Loader2, Menu, Pencil } from "lucide-react";
+import { MessageSquare, Send, User, Clock, Check, Loader2, Menu, Pencil, Sparkles } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import useRoastStore from "@/store/roast-store";
@@ -195,6 +195,24 @@ export default function RoastPage() {
           </motion.div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Roast Link CTA */}
+      <div className="fixed top-20 left-0 right-0 px-4 z-50">
+        <div className="bg-primary/10 backdrop-blur-sm rounded-full px-4 py-2 flex items-center justify-center gap-3">
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Sparkles className="h-4 w-4" />
+            Want to create your own roasting session?
+          </span>
+          <Button
+            variant="default"
+            size="sm"
+            className="rounded-full"
+            onClick={() => window.location.href = '/dashboard'}
+          >
+            Create Link
+          </Button>
+        </div>
+      </div>
 
       {isJoined && (
         <div className="h-[100dvh] flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
