@@ -6,7 +6,7 @@ const nextConfig = {
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
-      "undici": false // Disable undici to prevent parsing errors
+      "undici": false, // Disable undici to prevent parsing errors
     };
     return config;
   },

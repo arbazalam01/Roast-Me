@@ -18,6 +18,7 @@ import {
 interface UserInSession {
     codename: string;
     joinedAt: Date;
+    isTyping?: boolean;
 }
 
 interface RoastState {
@@ -36,6 +37,7 @@ interface RoastState {
     sendMessage: (id: string) => Promise<void>;
     joinSession: (id: string, codename: string) => Promise<void>;
     leaveSession: (id: string) => Promise<void>;
+    setTypingStatus: (id: string, isTyping: boolean) => Promise<void>;
 }
 
 const useRoastStore = create<RoastState>((set, get) => ({
@@ -71,6 +73,7 @@ const useRoastStore = create<RoastState>((set, get) => ({
             const newUsers = snapshot.docs.map((doc) => ({
                 codename: doc.id,
                 joinedAt: doc.data().joinedAt?.toDate(),
+                isTyping: doc.data().isTyping,
             })) as UserInSession[];
             set({ users: newUsers });
         });
@@ -128,6 +131,13 @@ const useRoastStore = create<RoastState>((set, get) => ({
             console.error("Failed to leave session:", error);
             throw error;
         }
+    },
+    setTypingStatus: async (id: string, isTyping: boolean) => {
+        const { codename } = get();
+        if (!codename) return;
+        
+        const userRef = doc(db, `roastSessions/${id}/users/${codename}`);
+        await setDoc(userRef, { isTyping }, { merge: true });
     },
 }));
 

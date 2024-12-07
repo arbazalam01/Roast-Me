@@ -7,7 +7,6 @@ import useThemeStore from '@/store/theme-store';
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   const { theme } = useThemeStore();
-  console.log('Current theme in ThemeProvider:', theme);
 
   return <NextThemesProvider {...props} defaultTheme={theme}>{children}</NextThemesProvider>;
 }
