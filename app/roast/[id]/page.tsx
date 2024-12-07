@@ -20,12 +20,15 @@ import { motion } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import useThemeStore from '@/store/theme-store';
 import { useTheme } from 'next-themes';
+import { getLinkData } from '@/lib/links';
 
 export default function RoastPage() {
   const { id } = useParams();
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [localCodename, setLocalCodename] = useState('');
+  const [sessionExpired, setSessionExpired] = useState(false);
   const {
     codename,
     message,
@@ -53,6 +56,33 @@ export default function RoastPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (!id) return;
+
+    const checkSessionValidity = async () => {
+      try {
+        const linkData = await getLinkData(id as string);
+        if (!linkData) {
+          setSessionExpired(true);
+          return;
+        }
+
+        const unsubscribeMessages = subscribeToMessages(id as string);
+        const unsubscribeUsers = subscribeToUsers(id as string);
+
+        return () => {
+          unsubscribeMessages();
+          unsubscribeUsers();
+        };
+      } catch (error) {
+        console.error("Failed to check session validity:", error);
+        setSessionExpired(true);
+      }
+    };
+
+    checkSessionValidity();
+  }, [id, subscribeToMessages, subscribeToUsers]);
 
   useEffect(() => {
     if (!id) return;
@@ -84,7 +114,7 @@ export default function RoastPage() {
   }, [id, codename]);
 
   const handleJoin = async () => {
-    if (!codename.trim()) {
+    if (!localCodename.trim()) {
       toast({
         title: "Oops! 🤔",
         description: "Your secret identity needs a name, roaster!",
@@ -94,10 +124,11 @@ export default function RoastPage() {
     }
 
     try {
-      await joinSession(id as string, codename);
+      setCodename(localCodename); // Set the global codename only when joining
+      await joinSession(id as string, localCodename);
       toast({
         title: "Roast Master Activated! 🔥",
-        description: `${codename} is ready to bring the heat!`,
+        description: `${localCodename} is ready to bring the heat!`,
       });
       setIsJoinModalOpen(false);
       setIsJoined(true);
@@ -152,6 +183,21 @@ export default function RoastPage() {
     }
   };
 
+  if (sessionExpired) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Chat Session Expired</CardTitle>
+            <CardDescription>
+              This chat session has expired or been deleted. Please request a new link to start a new chat session.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Join Roast Session Modal */}
@@ -176,13 +222,13 @@ export default function RoastPage() {
 
             <div className="space-y-4">
               <Input
-                value={codename}
-                onChange={(e) => setCodename(e.target.value)}
+                value={localCodename}
+                onChange={(e) => setLocalCodename(e.target.value)}
                 placeholder="Enter your legendary roast name..."
                 className="w-full text-sm sm:text-lg"
               />
               <Button
-                onClick={handleJoin}
+                onClick={() => handleJoin()}
                 className="w-full bg-primary hover:bg-primary/90 transition-all text-sm sm:text-base"
               >
                 Unleash Your Roast Fury!
