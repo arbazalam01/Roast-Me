@@ -17,6 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
+import { Sun, Moon } from "lucide-react";
+import useThemeStore from '@/store/theme-store';
+import { useTheme } from 'next-themes';
 
 export default function RoastPage() {
   const { id } = useParams();
@@ -37,11 +40,16 @@ export default function RoastPage() {
     joinSession,
     subscribeToUsers,
     setTypingStatus,
+    creator,
   } = useRoastStore();
   const { user } = useAuthStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const { theme, setTheme } = useTheme();
 
+  const toggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -65,6 +73,15 @@ export default function RoastPage() {
       setIsJoinModalOpen(true);
     }
   }, [isJoined]);
+
+  useEffect(() => {
+    // Clear typing status when component unmounts
+    return () => {
+      if (id && codename) {
+        setTypingStatus(id as string, false);
+      }
+    };
+  }, [id, codename]);
 
   const handleJoin = async () => {
     if (!codename.trim()) {
@@ -95,7 +112,7 @@ export default function RoastPage() {
 
   const handleSendMessage = async () => {
     if (!id || !message.trim() || sending) return;
-    
+
     try {
       setSending(true);
       await sendMessage(id as string);
@@ -113,19 +130,26 @@ export default function RoastPage() {
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
-    
+
+    if (!isJoined || !codename) return;
+
     // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set typing status to true
-    setTypingStatus(id as string, true);
+    // Set typing status to true only if there's text
+    if (e.target.value.trim()) {
+      setTypingStatus(id as string, true);
 
-    // Set a timeout to clear typing status after 2 seconds of no typing
-    typingTimeoutRef.current = setTimeout(() => {
+      // Set a timeout to clear typing status after 2 seconds of no typing
+      typingTimeoutRef.current = setTimeout(() => {
+        setTypingStatus(id as string, false);
+      }, 2000);
+    } else {
+      // If the input is empty, set typing status to false immediately
       setTypingStatus(id as string, false);
-    }, 2000);
+    }
   };
 
   return (
@@ -149,7 +173,7 @@ export default function RoastPage() {
                 Get ready to unleash your inner roast master! Choose a legendary alias and prepare for a battle of wits!
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               <Input
                 value={codename}
@@ -157,17 +181,17 @@ export default function RoastPage() {
                 placeholder="Enter your legendary roast name..."
                 className="w-full text-sm sm:text-lg"
               />
-              <Button 
-                onClick={handleJoin} 
+              <Button
+                onClick={handleJoin}
                 className="w-full bg-primary hover:bg-primary/90 transition-all text-sm sm:text-base"
               >
                 Unleash Your Roast Fury!
               </Button>
             </div>
-            
+
             <div className="text-center text-xs text-muted-foreground">
-                Remember, with great roast power comes great responsibility... and a whole lot of laughter! 😂
-              </div>
+              Remember, with great roast power comes great responsibility... and a whole lot of laughter! 😂
+            </div>
           </motion.div>
         </DialogContent>
       </Dialog>
@@ -186,13 +210,19 @@ export default function RoastPage() {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-center justify-center">
-                <Avatar className="w-10 h-10 mb-1">
-                  <AvatarImage src={user?.photoURL || undefined} />
-                  <AvatarFallback>{user?.displayName?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                <div className="text-xs text-muted-foreground">
-                  {user?.displayName}
+              <div className="flex items-center gap-4">
+                <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-full">
+                  <Sun className={theme === 'dark' ? 'hidden' : 'h-5 w-5'} />
+                  <Moon className={theme === 'light' ? 'hidden' : 'h-5 w-5'} />
+                </Button>
+                <div className="flex flex-col items-center justify-center">
+                  <Avatar className="w-10 h-10 mb-1">
+                    <AvatarImage src={creator?.photoURL || undefined} />
+                    <AvatarFallback>{creator?.displayName?.[0] || 'R'}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-xs text-muted-foreground">
+                    {creator?.displayName || 'Roast Creator'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -211,24 +241,35 @@ export default function RoastPage() {
 
                 // Generate distinct colors for different users
                 const getMessageColor = () => {
-                  if (isCurrentUser) return 'bg-zinc-900 text-white';
-                  
-                  const colors = [
-                    'bg-blue-100',
-                    'bg-green-100',
-                    'bg-purple-100',
-                    'bg-pink-100',
-                    'bg-orange-100',
-                    'bg-teal-100',
-                    'bg-cyan-100',
-                    'bg-rose-100'
+                  if (isCurrentUser) return 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900';
+
+                  const lightColors = [
+                    'bg-blue-100 text-blue-900',
+                    'bg-green-100 text-green-900',
+                    'bg-purple-100 text-purple-900',
+                    'bg-pink-100 text-pink-900',
+                    'bg-orange-100 text-orange-900',
+                    'bg-teal-100 text-teal-900',
+                    'bg-cyan-100 text-cyan-900',
+                    'bg-rose-100 text-rose-900'
                   ];
-                  
+
+                  const darkColors = [
+                    'dark:bg-blue-900 dark:text-blue-100',
+                    'dark:bg-green-900 dark:text-green-100',
+                    'dark:bg-purple-900 dark:text-purple-100',
+                    'dark:bg-pink-900 dark:text-pink-100',
+                    'dark:bg-orange-900 dark:text-orange-100',
+                    'dark:bg-teal-900 dark:text-teal-100',
+                    'dark:bg-cyan-900 dark:text-cyan-100',
+                    'dark:bg-rose-900 dark:text-rose-100'
+                  ];
+
                   const colorIndex = msg.codename.split('').reduce(
                     (acc, char) => acc + char.charCodeAt(0), 0
-                  ) % colors.length;
-                  
-                  return colors[colorIndex];
+                  ) % lightColors.length;
+
+                  return `${lightColors[colorIndex]} ${darkColors[colorIndex]}`;
                 };
 
                 return (
@@ -266,15 +307,18 @@ export default function RoastPage() {
                   </motion.div>
                 );
               })}
-              
+
               {/* Typing Indicators */}
               <div className="flex flex-wrap gap-2 px-4">
                 {users
-                  .filter((u) => u.isTyping && u.codename !== codename)
+                  .filter((u) => u.isTyping && u.codename !== codename && codename)
                   .map((user) => (
-                    <div
-                      key={user.codename}
+                    <motion.div
+                      key={`${user.codename}-typing`}
                       className="flex items-center gap-2 text-sm text-muted-foreground"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
                     >
                       <motion.div
                         animate={{ scale: [1, 1.2, 1] }}
@@ -283,10 +327,10 @@ export default function RoastPage() {
                         <Pencil size={14} />
                       </motion.div>
                       <span>{user.codename} is typing...</span>
-                    </div>
+                    </motion.div>
                   ))}
               </div>
-              
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -305,8 +349,8 @@ export default function RoastPage() {
                   }}
                   disabled={!isJoined}
                 />
-                <Button 
-                  onClick={handleSendMessage} 
+                <Button
+                  onClick={handleSendMessage}
                   disabled={!message.trim() || sending || !isJoined}
                   className="hover:bg-primary/90"
                 >

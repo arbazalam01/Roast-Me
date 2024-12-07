@@ -67,7 +67,11 @@ export default function DashboardPage() {
 
   const handleGenerateLink = async () => {
     try {
-      const newLinkId = await generateUniqueLink(user!.uid);
+      const newLinkId = await generateUniqueLink(
+        user!.uid,
+        user!.displayName || 'Anonymous Roaster',
+        user!.photoURL || ''
+      );
       await fetchUserLinks();
       toast({
         title: "Link generated!",
