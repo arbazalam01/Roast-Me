@@ -14,6 +14,16 @@ export interface LinkData {
   photoURL: string;
 }
 
+export interface LinkDataWithId extends LinkData {
+  id: string;
+}
+
+export interface LinkDataWithStringDates extends Omit<LinkData, 'createdAt' | 'expiresAt'> {
+  id: string;
+  createdAt: string;
+  expiresAt: string | Date;
+}
+
 export async function generateUniqueLink(userId: string, displayName: string, photoURL: string) {
   const shortId = nanoid(8);
   const linksRef = collection(db, "links");
@@ -48,7 +58,10 @@ export async function getLinkData(linkId: string) {
   const now = new Date();
   
   if (now > expiresAt) {
-    await checkAndHandleExpiredLink(linkData);
+    await checkAndHandleExpiredLink({
+      id: linkSnap.id,
+      ...linkData
+    });
     return null;
   }
   
@@ -66,13 +79,21 @@ export async function getUserLinks(userId: string) {
   const links = await Promise.all(
     querySnapshot.docs.map(async (doc) => {
       const data = doc.data() as LinkData;
-      const linkData = {
+      const isExpired = await checkAndHandleExpiredLink({
+        id: doc.id,
+        ...data
+      });
+      
+      if (isExpired) return null;
+
+      const linkData: LinkDataWithStringDates = {
         id: doc.id,
         ...data,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
+        createdAt: data.createdAt.toDate().toISOString(),
+        expiresAt: data.expiresAt.toDate()
       };
-      const isExpired = await checkAndHandleExpiredLink(linkData);
-      return isExpired ? null : linkData;
+      
+      return linkData;
     })
   );
 
@@ -101,7 +122,7 @@ export async function updateLinkStatus(linkId: string, active: boolean) {
   }, { merge: true });
 }
 
-async function checkAndHandleExpiredLink(linkData: LinkData): Promise<boolean> {
+async function checkAndHandleExpiredLink(linkData: LinkDataWithId): Promise<boolean> {
   const expiresAt = linkData.expiresAt instanceof Timestamp ? linkData.expiresAt.toDate() : new Date(linkData.expiresAt);
   const now = new Date();
   
