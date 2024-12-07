@@ -53,9 +53,14 @@ export async function getUserLinks(userId: string) {
   
   const links = await Promise.all(
     querySnapshot.docs.map(async (doc) => {
-      const data = { id: doc.id, ...doc.data() };
-      const isExpired = await checkAndHandleExpiredLink(data);
-      return isExpired ? null : data;
+      const data = doc.data();
+      const linkData = {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt
+      };
+      const isExpired = await checkAndHandleExpiredLink(linkData);
+      return isExpired ? null : linkData;
     })
   );
 
