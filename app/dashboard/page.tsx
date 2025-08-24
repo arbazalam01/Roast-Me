@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from 'next-themes';
 import Header from '../../components/Header';
 import { useAuthStore } from "@/store/auth-store";
+import { useUsernameStore } from "@/store/username-store";
 import {
   Table,
   TableBody,
@@ -21,6 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import UsernameSetup from "@/components/UsernameSetup";
+import { ExternalLink } from "lucide-react";
 
 interface Link {
   id: string;
@@ -30,6 +33,11 @@ interface Link {
 
 export default function DashboardPage() {
   const { user, loading, initialized, logout: handleLogout } = useAuthStore();
+  const {
+    currentUsername,
+    currentUsernameLoading,
+    loadCurrentUsername
+  } = useUsernameStore();
   const router = useRouter();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -49,8 +57,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user?.uid) {
       fetchUserLinks();
+      loadCurrentUsername(user.uid);
     }
-  }, [user?.uid]);
+  }, [user?.uid, loadCurrentUsername]);
 
   const fetchUserLinks = async () => {
     try {
@@ -113,6 +122,23 @@ export default function DashboardPage() {
     });
   };
 
+  const copyPublicPageLink = () => {
+    if (!currentUsername) return;
+    const link = `${window.location.origin}/u/${currentUsername.username}`;
+    navigator.clipboard.writeText(link);
+    toast({
+      title: "Public page link copied!",
+      description: "Share this link for anonymous messages.",
+    });
+  };
+
+  const handleUsernameCreated = () => {
+    // Refresh the current username data
+    if (user?.uid) {
+      loadCurrentUsername(user.uid);
+    }
+  };
+
   if (!initialized) {
     return <div className="flex min-h-screen items-center justify-center">
       <div className="animate-pulse text-lg">Loading...</div>
@@ -150,32 +176,65 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <div className="flex flex-col items-center space-y-4">
-              <h2 className="text-xl font-semibold text-center">
-                Hey {user?.displayName?.split(' ')[0] || 'Roaster'}! Let's get this roast party started!
-              </h2>
-              
-              <Button 
-                onClick={handleGenerateLink} 
-                className="w-full max-w-xs bg-primary hover:bg-primary/90 transition-colors duration-300 group"
-              >
-                <Flame className="mr-2 h-5 w-5 text-white group-hover:scale-110 transition-transform" />
-                Spark a New Roast
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-4 shadow-sm">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-center">Your Roasting Links</h3>
-              
-              {links.length === 0 ? (
-                <div className="text-center text-muted-foreground py-4">
-                  <p>No links generated yet</p>
-                  <p className="text-xs mt-2">Click "Spark a New Roast" to create your first link and get the roasting started!</p>
+          {/* Username Setup or Info Card */}
+          {currentUsernameLoading ? (
+            <Card className="p-8 shadow-sm">
+              <div className="flex items-center justify-center">
+                <div className="animate-pulse text-lg">Loading username...</div>
+              </div>
+            </Card>
+          ) : !currentUsername ? (
+            <UsernameSetup onUsernameCreated={handleUsernameCreated} />
+          ) : (
+            <Card className="p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="text-center space-y-2">
+                  <h2 className="text-xl font-semibold">
+                    Hey {user?.displayName?.split(' ')[0] || 'Roaster'}!
+                  </h2>
+                  <div className="bg-primary/10 rounded-lg p-3 space-y-2">
+                    <p className="text-sm font-medium">Your Public Page:</p>
+                    <p className="font-mono text-sm bg-background rounded px-2 py-1">
+                      /u/{currentUsername.username}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyPublicPageLink}
+                      className="w-full"
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Public Page Link
+                    </Button>
+                  </div>
                 </div>
-              ) : (
+                
+                <Button
+                  onClick={handleGenerateLink}
+                  className="w-full max-w-xs bg-primary hover:bg-primary/90 transition-colors duration-300 group"
+                >
+                  <Flame className="mr-2 h-5 w-5 text-white group-hover:scale-110 transition-transform" />
+                  Spark a New Roast Session
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {/* Only show roasting links if user has a username */}
+          {currentUsername && (
+            <Card className="p-4 shadow-sm">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-center">Your Roasting Session Links</h3>
+                <p className="text-xs text-center text-muted-foreground">
+                  Temporary collaborative roasting sessions (different from your permanent public page)
+                </p>
+                
+                {links.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-4">
+                    <p>No roasting sessions yet</p>
+                    <p className="text-xs mt-2">Click "Spark a New Roast Session" to create your first collaborative session!</p>
+                  </div>
+                ) : (
                 <div className="space-y-4">
                   {links.map((link) => (
                     <div 
@@ -258,8 +317,9 @@ export default function DashboardPage() {
               )}
             </div>
           </Card>
-        </div>
+        )}
       </div>
     </div>
+  </div>
   );
 }
