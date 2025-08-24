@@ -37,3 +37,7 @@ next-env.d.ts
 .bolt
 
 docker-compose.yml
+
+firestore.rules
+
+firestore.indexes.json
