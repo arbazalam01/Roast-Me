@@ -1,7 +1,9 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { Sun, Moon, Flame } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 import useThemeStore from '@/store/theme-store';
+import Image from 'next/image';
+import Logo from '@/images/logo.png';
 
 const Header = ({ toggleTheme, isLoggedIn, onLogin, onLogout }: { 
     toggleTheme: () => void, 
@@ -14,8 +16,7 @@ const Header = ({ toggleTheme, isLoggedIn, onLogin, onLogout }: {
     return (
         <header className='flex justify-between items-center p-4'>
             <div className='flex items-center'>
-                <Flame className='h-8 mr-2 text-destructive' />
-                <h1 className='text-xl font-bold'>Roast ME</h1>
+                <Image src={Logo} alt="Roast Me Logo" width={80} height={80} />
             </div>
             <div className='flex items-center'>
                 <Button onClick={toggleTheme} className='flex items-center mr-4'>
